@@ -1,24 +1,29 @@
 package icu.takeneko.nekogl;
 
 import icu.takeneko.nekogl.call.RenderCall;
-import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL;
 
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.lwjgl.glfw.GLFW.*;
-import static org.lwjgl.glfw.GLFW.glfwGetWindowSize;
 import static org.lwjgl.opengl.GL11.*;
 
 public abstract class RenderThread extends Thread {
     private final LinkedBlockingQueue<RenderCall> renderCalls = new LinkedBlockingQueue<>();
     protected final GlContext context = new GlContext(this);
-    
-    public void init(String windowTitle, int windowWidth, int windowHeight){
+
+    public void launch(String windowTitle, int windowWidth, int windowHeight){
         context.init(windowTitle, windowWidth, windowHeight);
+        start();
+        glfwPollEvents();
     }
 
-    RenderThread(){
+    public void end(){
+        interrupt();
+        context.terminate();
+    }
+
+    public RenderThread(){
         super("RenderThread");
     }
 
@@ -28,38 +33,46 @@ public abstract class RenderThread extends Thread {
         context.terminate();
     }
 
-    private void loop() {
-
-        glfwMakeContextCurrent(context.getWindow());
-        GL.createCapabilities();
-        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        glfwSwapInterval(1);
-        while (!context.windowShouldClose()) {
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            glViewport(0, 0, context.getFramebufferWidth(), context.getFramebufferHeight());
-            render();
-            if (!renderCalls.isEmpty()) {
-                synchronized (renderCalls) {
-                    for (RenderCall call : renderCalls) {
-                        try {
-                            call.accept(context);
-                        } catch (Throwable t) {
-                            UncaughtExceptionHandler handler = getUncaughtExceptionHandler();
-                            if (handler != null) {
-                                handler.uncaughtException(this, t);
-                            } else {
-                                throw new RuntimeException("Uncaught Exception on RenderThread.", t);
-                            }
+    private void invokePendingCalls(){
+        if (!renderCalls.isEmpty()) {
+            synchronized (renderCalls) {
+                for (RenderCall call : renderCalls) {
+                    try {
+                        call.accept(context);
+                    } catch (Throwable t) {
+                        UncaughtExceptionHandler handler = getUncaughtExceptionHandler();
+                        if (handler != null) {
+                            handler.uncaughtException(this, t);
+                        } else {
+                            throw new RuntimeException("Uncaught Exception on RenderThread.", t);
                         }
                     }
                 }
+                renderCalls.clear();
             }
+        }
+    }
+
+    private void loop() {
+        long window = context.getWindow();
+        glfwMakeContextCurrent(window);
+        GL.createCapabilities();
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glfwSwapInterval(1);
+        initRenderer();
+        while (!glfwWindowShouldClose(window)) {
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glViewport(0, 0, context.getFramebufferWidth(), context.getFramebufferHeight());
+            render();
+            invokePendingCalls();
             if (!OperatingSystem.IS_MAC_OS) {
                 glfwPollEvents();
             }
-            context.swapBuffers();
+            glfwSwapBuffers(window);
         }
     }
+
+    protected void initRenderer(){}
 
     abstract protected void render();
 
