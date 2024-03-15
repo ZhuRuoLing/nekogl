@@ -13,31 +13,31 @@ fun main() {
         override fun initRenderer() {
             simple2DRenderer = object : Simple2DRenderer() {
                 override fun draw() {
-                    triangle(
-                        0f,0f,
-                        -1f,-1f,
-                        1f,-1f,
-                        1f,1f,1f,0f
+                    rect(
+                        -0.5f, -0.5f,
+                        0.5f, 0.5f,
+                        1f, 1f, 0f, 0.5f
                     )
                 }
             }
-
         }
 
         override fun render() {
+            //GL11.glEnable(GL11.GL_BLEND)
             frameCount++
             simple2DRenderer.viewport(this.context.framebufferWidth, this.context.framebufferHeight)
-            GL11.glEnable(GL11.GL_BLEND)
-            //GL11.glClearColor((frameCount % 60f) / 60f, (frameCount % 60f) / 60f, (frameCount % 60f) / 60f, 0.0f)
+            //GL11.glClearColor(1f, 1f, 0f, 0f)
             simple2DRenderer.render()
+            if (frameCount % 60 == 0) println("frameCount = $frameCount")
+            //GL11.glDisable(GL11.GL_BLEND)
         }
     }
     renderThread.uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { t: Thread, e: Throwable ->
         System.err.println("Uncaught exception on thread $t")
         e.printStackTrace()
     }
-    renderThread.launch(null, 854, 480)
-    Thread.sleep(10)
+    renderThread.launch("nekogl", 854, 480)
+    Thread.sleep(1000)
     while (renderThread.isAlive) {
         GLFW.glfwPollEvents()
     }

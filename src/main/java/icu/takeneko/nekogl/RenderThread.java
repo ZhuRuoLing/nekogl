@@ -1,6 +1,7 @@
 package icu.takeneko.nekogl;
 
 import icu.takeneko.nekogl.call.RenderCall;
+import org.lwjgl.glfw.Callbacks;
 import org.lwjgl.opengl.GL;
 
 import java.util.concurrent.LinkedBlockingQueue;
@@ -57,9 +58,9 @@ public abstract class RenderThread extends Thread {
         long window = context.getWindow();
         glfwMakeContextCurrent(window);
         GL.createCapabilities();
+        initRenderer();
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glfwSwapInterval(1);
-        initRenderer();
         while (!glfwWindowShouldClose(window)) {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glViewport(0, 0, context.getFramebufferWidth(), context.getFramebufferHeight());
@@ -70,6 +71,10 @@ public abstract class RenderThread extends Thread {
             }
             glfwSwapBuffers(window);
         }
+        Callbacks.glfwFreeCallbacks(window);
+        glfwDestroyWindow(window);
+        glfwMakeContextCurrent(0);
+
     }
 
     protected void initRenderer(){}
