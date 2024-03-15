@@ -1,11 +1,11 @@
 #version 150 core
-in vec4 fColor;
+in vec4 vertexColor;
 
 out vec4 FragColor;
 
 void main() {
-    if (fColor.a < 0.01) {
+    if (vertexColor.a == 0.0) {
         discard;
     }
-    FragColor = fColor;
+    FragColor = vertexColor;
 }
